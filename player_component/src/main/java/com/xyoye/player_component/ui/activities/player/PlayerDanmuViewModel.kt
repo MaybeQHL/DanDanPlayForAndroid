@@ -84,17 +84,32 @@ class PlayerDanmuViewModel : BaseViewModel() {
 
         var keyword="";
         var epNumber=""
+        var filename= ""
+        var decodedString=""
+        var lastPart=""
+        var names:List<String>
 
-        val filename=  getFileNameNoExtension(videoUrl)
+
+        filename=  getFileNameNoExtension(videoUrl)
         // 解码字符串
-        val decodedString = URLDecoder.decode(filename, "UTF-8")
+        decodedString = URLDecoder.decode(filename, "UTF-8")
         // 获取最后一个 "/" 后面的内容
-        val lastPart = decodedString.substringAfterLast("/")
+        lastPart = decodedString.substringAfterLast("/")
 
-        val names=lastPart.split("-")
+            //兼容纯纯看番下载文件
+        if(videoUrl.contains("EasyBangumi",true)){
+            names=lastPart.split("-")
+            keyword=names[0]
+            epNumber=names[2]
+            epNumber=names[2]
+        }else{
+            names=lastPart.split("-")
+            keyword=names[0]
+            epNumber=names[1]
+        }
 
-         keyword=names[0]
-         epNumber=names[1]
+
+
 
         val  oyydsSearchData=OyydsSearchData(keyword,epNumber)
         Log.d("oyydsSearchData",oyydsSearchData.toString())
