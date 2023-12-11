@@ -11,6 +11,7 @@ import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.lifecycleScope
 import com.alibaba.android.arouter.facade.annotation.Route
 import com.alibaba.android.arouter.launcher.ARouter
+import com.danikula.videocache.Log
 import com.gyf.immersionbar.BarHide
 import com.gyf.immersionbar.ImmersionBar
 import com.xyoye.common_component.base.BaseActivity
@@ -317,6 +318,11 @@ class PlayerActivity : BaseActivity<PlayerViewModel, ActivityPlayerBinding>(),
             }
         }
 
+        // 自动匹配弹幕（oyyds 修改版）
+//        danmuViewModel.loadDanmu(videoSource!!)
+//        android.util.Log.d("自动匹配弹幕（oyyds 修改版）","666")
+//        return
+
         //自动匹配弹幕，弹窗模式不执行匹配
         if (DanmuConfig.isAutoMatchDanmu()
             && videoSource!!.getMediaType() != MediaType.FTP_SERVER
@@ -326,6 +332,8 @@ class PlayerActivity : BaseActivity<PlayerViewModel, ActivityPlayerBinding>(),
         } else {
             videoController.setDanmuPath(videoSource!!.getDanmuPath())
         }
+
+
     }
 
     private fun registerReceiver() {

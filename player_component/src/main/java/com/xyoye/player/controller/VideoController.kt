@@ -2,6 +2,7 @@ package com.xyoye.player.controller
 
 import android.content.Context
 import android.util.AttributeSet
+import android.util.Log
 import androidx.lifecycle.LiveData
 import com.xyoye.common_component.utils.formatDuration
 import com.xyoye.data_component.bean.DanmuSourceContentBean

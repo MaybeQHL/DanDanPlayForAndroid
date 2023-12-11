@@ -1,8 +1,10 @@
 package com.xyoye.player_component.ui.activities.player
 
 import android.net.Uri
+import android.util.Log
 import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.viewModelScope
+import com.alibaba.fastjson.JSONWriter
 import com.xyoye.common_component.base.BaseViewModel
 import com.xyoye.common_component.extension.isValid
 import com.xyoye.common_component.extension.toFile
@@ -12,17 +14,25 @@ import com.xyoye.common_component.source.base.BaseVideoSource
 import com.xyoye.common_component.utils.DanmuUtils
 import com.xyoye.common_component.utils.FileHashUtils
 import com.xyoye.common_component.utils.IOUtils
+import com.xyoye.common_component.utils.JsonHelper
 import com.xyoye.common_component.utils.comparator.FileNameComparator
+import com.xyoye.common_component.utils.getFileNameNoExtension
 import com.xyoye.data_component.bean.DanmuSourceContentBean
 import com.xyoye.data_component.bean.LoadDanmuBean
 import com.xyoye.data_component.data.DanmuAnimeData
 import com.xyoye.data_component.enums.LoadDanmuState
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
+import java.net.URLDecoder
 
 /**
  * Created by xyoye on 2022/1/2.
  */
+
+data class OyydsSearchData(
+    var keyword:String,
+    var epNumber:String
+)
 
 class PlayerDanmuViewModel : BaseViewModel() {
     val loadDanmuLiveData = MutableLiveData<LoadDanmuBean>()
@@ -42,7 +52,6 @@ class PlayerDanmuViewModel : BaseViewModel() {
                 loadDanmuLiveData.postValue(loadResult)
                 return@launch
             }
-
             //根据弹幕路径选择合适弹幕匹配方法
             val videoUrl = videoSource.getVideoUrl()
             val uri = Uri.parse(videoUrl)
@@ -65,19 +74,47 @@ class PlayerDanmuViewModel : BaseViewModel() {
         }
     }
 
+
+    /**
+     * 获取oyyds搜索弹幕的结构
+     * @author maybe
+     * 2023-12-11 15:18:22
+     */
+    private  fun  getOyydsSearchData(videoUrl:String): OyydsSearchData {
+
+        var keyword="";
+        var epNumber=""
+
+        val filename=  getFileNameNoExtension(videoUrl)
+        // 解码字符串
+        val decodedString = URLDecoder.decode(filename, "UTF-8")
+        // 获取最后一个 "/" 后面的内容
+        val lastPart = decodedString.substringAfterLast("/")
+
+        val names=lastPart.split("-")
+
+         keyword=names[0]
+         epNumber=names[1]
+
+        val  oyydsSearchData=OyydsSearchData(keyword,epNumber)
+        Log.d("oyydsSearchData",oyydsSearchData.toString())
+        return  oyydsSearchData
+    }
     private suspend fun loadLocalDanmu(videoUrl: String) {
         val loadResult = LoadDanmuBean(videoUrl)
 
         val uri = Uri.parse(videoUrl)
         val fileHash = IOUtils.getFileHash(uri.path)
-        if (fileHash == null) {
-            loadDanmuLiveData.postValue(loadResult)
-            return
-        }
+//        if (fileHash == null) {
+//            loadDanmuLiveData.postValue(loadResult)
+//            return
+//        }
 
         loadResult.state = LoadDanmuState.MATCHING
         loadDanmuLiveData.postValue(loadResult)
-        val danmuInfo = DanmuUtils.matchDanmuSilence(videoUrl, fileHash)
+//        val danmuInfo = DanmuUtils.matchDanmuSilence(videoUrl, fileHash)
+        val  oyydsSearchdata= getOyydsSearchData(videoUrl)
+        val danmuInfo = DanmuUtils.matchDanmuSilenceOyyds(videoUrl, "",oyydsSearchdata.keyword,oyydsSearchdata.epNumber)
         if (danmuInfo == null) {
             loadResult.state = LoadDanmuState.NO_MATCHED
             loadDanmuLiveData.postValue(loadResult)

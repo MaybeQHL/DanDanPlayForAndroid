@@ -22,6 +22,7 @@ class Retrofit private constructor() {
         private const val torrentUrl = "https://m2t.dandanplay.net/"
         private const val remoteUrl = "http://127.0.0.1:80/"
         const val handLPUrl = "https://www.hanlp.com"
+        const val oyydsBaseUrl = "http://my-api.oyyds.top/"
 
         val service = Holder.instance.retrofitService
         val resService = Holder.instance.resRetrofitService
@@ -29,6 +30,7 @@ class Retrofit private constructor() {
         val torrentService = Holder.instance.torrentRetrofitService
         val remoteService = Holder.instance.remoteRetrofitService
         val screencastService = Holder.instance.screencastService
+        val oyydsService= Holder.instance.oyydsService
     }
 
     private var retrofitService: RetrofitService
@@ -39,6 +41,8 @@ class Retrofit private constructor() {
     private var screencastService: ScreencastService
 
     private val moshiConverterFactory = MoshiConverterFactory.create(JsonHelper.MO_SHI)
+
+    private var oyydsService: OyydsService
 
     init {
         retrofitService = Retrofit.Builder()
@@ -82,6 +86,14 @@ class Retrofit private constructor() {
             .baseUrl(remoteUrl)
             .build()
             .create(ScreencastService::class.java)
+
+
+        oyydsService = Retrofit.Builder()
+            .addConverterFactory(moshiConverterFactory)
+            .client(getOkHttpClient())
+            .baseUrl(oyydsBaseUrl)
+            .build()
+            .create(OyydsService::class.java)
     }
 
     private object Holder {

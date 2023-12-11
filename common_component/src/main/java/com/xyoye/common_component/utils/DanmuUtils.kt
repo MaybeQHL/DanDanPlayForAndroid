@@ -1,7 +1,9 @@
 package com.xyoye.common_component.utils
 
+import android.util.Log
 import com.xyoye.common_component.extension.formatFileName
 import com.xyoye.common_component.network.Retrofit
+import com.xyoye.data_component.data.DanmuContentData
 import com.xyoye.data_component.data.DanmuData
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -272,6 +274,75 @@ object DanmuUtils {
                         return@withContext Pair(danmuPath, episodeId)
                     }
                 }
+                return@withContext null
+            } catch (e: Exception) {
+                DDLog.e("自动匹配弹幕失败", e)
+                return@withContext null
+            }
+        }
+    }
+
+
+    fun hexToColor(hex: String): Int {
+        // 移除可能包含的 # 前缀
+        val cleanHex = if (hex.startsWith("#")) hex.substring(1) else hex
+
+        // 将16进制字符串转换为整数
+        val colorValue = cleanHex.toLongOrNull(16)
+
+        // 如果转换成功，返回32位整数，否则返回默认颜色（这里是白色）
+        return colorValue?.toInt() ?: 0xFFFFFFFF.toInt()
+    }
+
+    /**
+     * 静默匹配弹幕(oyyds)
+     */
+    suspend fun matchDanmuSilenceOyyds(filePath: String, fileHash: String,keywords:String="",epNumber:String="0"):  Pair<String, Int>? {
+        return withContext(Dispatchers.IO) {
+            try {
+                //提取视频信息
+                val params = HashMap<String, String>()
+
+                params["fileName"] = getFileName(filePath)
+                params["fileHash"] = fileHash
+                params["fileSize"] = "0"
+                params["videoDuration"] = "0"
+                params["matchMode"] = "hashOnly"
+
+                Log.d("oyyds params:",params.toString())
+                val episodeId=0
+                val epNumber=epNumber
+                val oyydsSearchRes = Retrofit.oyydsService.searchDanmu(keywords,epNumber )
+//                val total = oyydsSearchRes.data.total
+                val datas=oyydsSearchRes.data.data;
+
+//                Log.d("oyyds 搜索：",datas.toString())
+                if (datas !== null && datas.isNotEmpty() ) {
+                    val count= oyydsSearchRes.data.total
+                    val comments= oyydsSearchRes.data.data!!.map {
+                        val arr=it.split(',')
+                        val cid=0
+                        //p参数格式为出现时间,模式,颜色,用户ID，各个参数之间使用英文逗号分隔
+                        val p1=arr[0]
+                        val p2= if (arr[1] == "top") 5 else 1
+                        val p3= hexToColor(arr[2])
+                        val p="$p1,$p2,$p3,0"
+                        val m=arr[3]
+                        DanmuContentData(cid,p,m)
+                    }.toMutableList()
+                    val danmuData = DanmuData(count,comments)
+
+//                    Log.d("oyyds item",danmuData.toString())
+                    val folderName = getParentFolderName(filePath)
+                    val fileNameNotExt = getFileNameNoExtension(filePath)
+                    //保存弹幕, 返回路径
+                    val danmuPath = saveDanmu(danmuData, folderName, "$fileNameNotExt.xml")
+                    if (danmuPath != null) {
+                        return@withContext Pair(danmuPath, episodeId)
+                    }
+                }
+
+
                 return@withContext null
             } catch (e: Exception) {
                 DDLog.e("自动匹配弹幕失败", e)
