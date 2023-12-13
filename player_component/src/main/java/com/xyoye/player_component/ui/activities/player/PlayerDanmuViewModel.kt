@@ -30,8 +30,8 @@ import java.net.URLDecoder
  */
 
 data class OyydsSearchData(
-    var keyword:String,
-    var epNumber:String
+    var keyword: String,
+    var epNumber: String
 )
 
 class PlayerDanmuViewModel : BaseViewModel() {
@@ -59,9 +59,11 @@ class PlayerDanmuViewModel : BaseViewModel() {
                 "http", "https" -> {
                     loadNetworkDanmu(videoSource)
                 }
+
                 "file", "content" -> {
                     loadLocalDanmu(videoUrl)
                 }
+
                 else -> {
                     //本地视频的绝对路径，例：/storage/emulate/0/Download/test.mp4
                     if (videoUrl.startsWith("/")) {
@@ -80,41 +82,41 @@ class PlayerDanmuViewModel : BaseViewModel() {
      * @author maybe
      * 2023-12-11 15:18:22
      */
-    private  fun  getOyydsSearchData(videoUrl:String): OyydsSearchData {
+    private fun getOyydsSearchData(videoPath: String): OyydsSearchData? {
 
-        var keyword="";
-        var epNumber=""
-        var filename= ""
-        var decodedString=""
-        var lastPart=""
-        var names:List<String>
+        var keyword = "";
+        var epNumber = ""
+        var filename = ""
+        var decodedString = ""
+        var lastPart = ""
+        var names: List<String>
 
 
-        filename=  getFileNameNoExtension(videoUrl)
+        filename = getFileNameNoExtension(videoPath)
         // 解码字符串
         decodedString = URLDecoder.decode(filename, "UTF-8")
         // 获取最后一个 "/" 后面的内容
         lastPart = decodedString.substringAfterLast("/")
 
-            //兼容纯纯看番下载文件
-        if(videoUrl.contains("EasyBangumi",true)){
-            names=lastPart.split("-")
-            keyword=names[0]
-            epNumber=names[2]
-            epNumber=names[2]
-        }else{
-            names=lastPart.split("-")
-            keyword=names[0]
-            epNumber=names[1]
+        //兼容纯纯看番下载文件
+        if (videoPath.contains("EasyBangumi", true)) {
+            names = lastPart.split("-")
+            keyword = names[0]
+            epNumber = names[2]
+            epNumber = names[2]
+        } else if (lastPart.contains("-")) {
+            names = lastPart.split("-")
+            keyword = names[0]
+            epNumber = names[1]
+        } else {
+            return null
         }
 
-
-
-
-        val  oyydsSearchData=OyydsSearchData(keyword,epNumber)
-        Log.d("oyydsSearchData",oyydsSearchData.toString())
-        return  oyydsSearchData
+        val oyydsSearchData = OyydsSearchData(keyword, epNumber)
+        Log.d("oyydsSearchData", oyydsSearchData.toString())
+        return oyydsSearchData
     }
+
     private suspend fun loadLocalDanmu(videoUrl: String) {
         val loadResult = LoadDanmuBean(videoUrl)
 
@@ -128,8 +130,19 @@ class PlayerDanmuViewModel : BaseViewModel() {
         loadResult.state = LoadDanmuState.MATCHING
         loadDanmuLiveData.postValue(loadResult)
 //        val danmuInfo = DanmuUtils.matchDanmuSilence(videoUrl, fileHash)
-        val  oyydsSearchdata= getOyydsSearchData(videoUrl)
-        val danmuInfo = DanmuUtils.matchDanmuSilenceOyyds(videoUrl, "",oyydsSearchdata.keyword,oyydsSearchdata.epNumber)
+        var danmuInfo: Pair<String, Int>? = null
+        val oyydsSearchdata = getOyydsSearchData(videoUrl)
+        if (oyydsSearchdata != null) {
+            danmuInfo = DanmuUtils.matchDanmuSilenceOyyds(
+                videoUrl,
+                "",
+                oyydsSearchdata.keyword,
+                oyydsSearchdata.epNumber
+            )
+        } else {
+//   项目原生调用方式
+            danmuInfo = fileHash?.let { DanmuUtils.matchDanmuSilence(videoUrl, it) }
+        }
         if (danmuInfo == null) {
             loadResult.state = LoadDanmuState.NO_MATCHED
             loadDanmuLiveData.postValue(loadResult)
@@ -143,6 +156,7 @@ class PlayerDanmuViewModel : BaseViewModel() {
     }
 
     private suspend fun loadNetworkDanmu(videoSource: BaseVideoSource) {
+
         val loadResult = LoadDanmuBean(videoSource.getVideoUrl())
         val headers = videoSource.getHttpHeader() ?: emptyMap()
 
@@ -165,7 +179,21 @@ class PlayerDanmuViewModel : BaseViewModel() {
 
         loadResult.state = LoadDanmuState.MATCHING
         loadDanmuLiveData.postValue(loadResult)
-        val danmuInfo = DanmuUtils.matchDanmuSilence(videoSource.getVideoTitle(), hash)
+
+        // var  danmuInfo = DanmuUtils.matchDanmuSilence(videoSource.getVideoTitle(), hash)
+        var danmuInfo: Pair<String, Int>? = null
+        val oyydsSearchdata = getOyydsSearchData(videoSource.getVideoTitle())
+        if (oyydsSearchdata != null) {
+            danmuInfo = DanmuUtils.matchDanmuSilenceOyyds(
+                videoSource.getVideoTitle(),
+                "",
+                oyydsSearchdata.keyword,
+                oyydsSearchdata.epNumber
+            )
+        } else {
+            // 项目原生调用方式
+            danmuInfo = DanmuUtils.matchDanmuSilence(videoSource.getVideoTitle(), hash)
+        }
         if (danmuInfo == null) {
             loadResult.state = LoadDanmuState.NO_MATCHED
             loadDanmuLiveData.postValue(loadResult)
